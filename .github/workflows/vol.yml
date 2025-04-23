@@ -1,67 +1,72 @@
-name: Enquête policière SuperPrix
+name: Enquête SuperPrix
 
-on: 
-  push:
+on: push
 
 jobs:
   policier-scene:
+    name: Policier - Scène de crime
     runs-on: ubuntu-latest
     outputs:
-      empreinte: "empreinte trouvée sur la caisse"
+      empreinte: empreinte trouvée sur la caisse
     steps:
-      - name: Observation de la scène
-        run: echo "Le policier examine la caisse enregistreuse"
-      - name: Prélèvement d’empreinte
-        run: echo "Empreinte prélevée sur la caisse"
+      - name: Analyse de la scène
+        run: |
+          echo "Le policier examine la caisse enregistreuse"
+          echo "Empreinte prélevée sur la caisse"
 
   policier-video:
+    name: Policier - Analyse vidéo
     runs-on: ubuntu-latest
     outputs:
-      video: ${{ steps.get_video.outputs.resultat }}
+      video: ${{ steps.video-step.outputs.resultat }}
     steps:
-      - name: Récupération vidéo
-        id: get_video
+      - name: Récupération des vidéos
+        id: video-step
         run: echo "resultat=Séquence vidéo 22h15-22h45 récupérée" >> $GITHUB_OUTPUT
 
   detective:
+    name: Détective
     runs-on: ubuntu-latest
-    needs: [policier-scene, policier-video]
+    needs:
+      - policier-scene
+      - policier-video
     outputs:
-      rapport: ${{ steps.rapport-final.outputs.conclusion }}
-      lieu_arrestation: ${{ steps.rapport-final.outputs.lieu }}
-      autorisation_arrestation: ${{ steps.rapport-final.outputs.autorisation }}
+      rapport: ${{ steps.conclusion-step.outputs.conclusion }}
+      lieu_arrestation: ${{ steps.conclusion-step.outputs.lieu }}
+      autorisation_arrestation: ${{ steps.conclusion-step.outputs.autorisation }}
     steps:
-      - name: Affichage des indices
+      - name: Afficher les indices
         run: |
-          echo "Indice empreinte : ${{ needs.policier-scene.outputs.empreinte }}"
-          echo "Indice vidéo : ${{ needs.policier-video.outputs.video }}"
+          echo "Indice empreinte: ${{ needs.policier-scene.outputs.empreinte }}"
+          echo "Indice vidéo: ${{ needs.policier-video.outputs.video }}"
 
       - name: Analyse des indices
         run: |
           echo "ANALYSE_EMPREINTE=Empreinte correspond à un suspect connu" >> $GITHUB_ENV
           echo "ANALYSE_VIDEO=Suspect identifié sur la vidéo à 22h30" >> $GITHUB_ENV
 
-      - name: Rapport final
-        id: rapport-final
+      - name: Rédaction du rapport
+        id: conclusion-step
         run: |
           echo "conclusion=${ANALYSE_EMPREINTE}, ${ANALYSE_VIDEO}, suspect identifié" >> $GITHUB_OUTPUT
           echo "lieu=42 Avenue du Commerce, Supermarché SuperPrix" >> $GITHUB_OUTPUT
           echo "autorisation=true" >> $GITHUB_OUTPUT
 
   police:
+    name: Équipe d'intervention
     runs-on: ubuntu-latest
     needs: detective
     steps:
-      - name: Lecture du rapport du détective
+      - name: Lecture du rapport
         run: |
-          echo "📝 Rapport : ${{ needs.detective.outputs.rapport }}"
-          echo "📍 Lieu : ${{ needs.detective.outputs.lieu_arrestation }}"
-          echo "✅ Autorisation : ${{ needs.detective.outputs.autorisation_arrestation }}"
+          echo "Rapport: ${{ needs.detective.outputs.rapport }}"
+          echo "Lieu: ${{ needs.detective.outputs.lieu_arrestation }}"
+          echo "Autorisation: ${{ needs.detective.outputs.autorisation_arrestation }}"
 
-      - name: Vérification de l’autorisation
+      - name: Enquête sans suite
         if: needs.detective.outputs.autorisation_arrestation != 'true'
-        run: echo "🚫 Pas d'autorisation – enquête classée sans suite."
+        run: echo "Pas d'autorisation d'arrestation. Enquête classée sans suite."
 
-      - name: Intervention
+      - name: Arrestation du suspect
         if: needs.detective.outputs.autorisation_arrestation == 'true'
-        run: echo "🚓 Intervention en cours au 42 Avenue du Commerce"
+        run: echo "Le suspect a été arrêté au Supermarché SuperPrix ! 🚔"
